@@ -1,0 +1,25 @@
+ecommerce-recommender/
+├── src/
+│   ├── __init__.py
+│   ├── models/          # modelos de ML
+│   │   ├── __init__.py
+│   │   ├── base.py      # interface base 
+│   │   └── factory.py   # Factory Pattern
+│   ├── data/            # carregamento e processamento
+│   │   ├── __init__.py
+│   │   ├── loader.py
+│   │   └── preprocessors.py  # Strategy Pattern
+│   └── config.py        # configurações centralizadas
+├── tests/
+│   └── __init__.py
+├── data/
+│   ├── raw/
+│   └── processed/
+├── models/              # artefatos treinados
+├── configs/
+│   └── model_config.yaml
+├── scripts/
+│   └── validate_env.py
+├── .gitignore
+├── .env.example
+└── README.md
