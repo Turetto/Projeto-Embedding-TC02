@@ -11,7 +11,7 @@ dist/
 # Dados e modelos (versionados pelo DVC)
 data/raw/
 data/processed/
-models/
+model/
 
 # MLflow
 mlruns/
