@@ -1,5 +1,5 @@
 import pandas as pd
-from src.data.preprocessors import IdEncoder
+from src.data.preprocessors import IdEncoder, RatingNormalizer
 
 data = pd.DataFrame({
     "user_id": [10,10,99,99],
@@ -11,4 +11,8 @@ encoder = IdEncoder()
 result = encoder.fit_transform(data)
 print(result)
 print(f"Usuários: {encoder.n_users}, itens: {encoder.n_items}")
+
+normalizer = RatingNormalizer()
+result_rating = normalizer.fit_transform(data)
+print(result_rating)
 

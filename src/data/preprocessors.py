@@ -57,4 +57,22 @@ class IdEncoder(PreProcessingStrategy):
     def n_items(self) -> int:
         return len(self._item_map)
 
+class RatingNormalizer(PreProcessingStrategy):
+    """
+    Normalização dos ratings no intervalo 0-1
+    """
+
+    def __init__(self) -> None:
+        self._min: float = 0.0
+        self._max: float = 1.0
+
+    def fit(self, data: pd.DataFrame) -> "RatingNormalizer":
+        self._min = float(data["rating"].min())
+        self._max = float(data["rating"].max())
+        return self
     
+    def transform(self, data: pd.DataFrame) -> pd.DataFrame:
+        result = data.copy()
+        result["rating"] = (data["rating"] - self._min)/(self._max - self._min)
+        return result
+        
