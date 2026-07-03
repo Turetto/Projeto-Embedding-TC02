@@ -22,5 +22,6 @@ def create_model(model_type: str, **kwargs) -> BaseRecommender:
 
     if model_type not in _registry:
         available = list(_registry.keys())
-        raise ValueError(f"Modelo '{model_type}' não encontrado. Modelos Disponíveis: {available}")
+        raise ValueError(f"Modelo '{model_type}' não encontrado. "
+                         f"Modelos Disponíveis: {available}")
     return _registry[model_type](**kwargs)

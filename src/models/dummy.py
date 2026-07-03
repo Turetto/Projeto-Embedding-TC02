@@ -1,6 +1,8 @@
 import numpy as np
-from src.models.factory import register_model, create_model
+
 from src.models.base import BaseRecommender
+from src.models.factory import create_model, register_model
+
 
 @register_model("dummy")
 class DummyModel(BaseRecommender):

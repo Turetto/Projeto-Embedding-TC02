@@ -12,3 +12,19 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "torch>=2.12.1",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.20",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N"]
+# E = erros de estilo
+# F = erros lógicos (variável não usada, import não usado)
+# I = ordenação de imports
+# N = naming conventions

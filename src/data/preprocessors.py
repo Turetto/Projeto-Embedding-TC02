@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
+
 class PreProcessingStrategy(ABC):
     """
     Interface base para estratégias de pré processamento

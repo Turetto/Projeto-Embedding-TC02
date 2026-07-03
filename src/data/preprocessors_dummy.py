@@ -1,4 +1,5 @@
 import pandas as pd
+
 from src.data.preprocessors import IdEncoder, RatingNormalizer
 
 data = pd.DataFrame({

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+
 class BaseRecommender (ABC):
     """
     Interface base para os modelos de recomendação
