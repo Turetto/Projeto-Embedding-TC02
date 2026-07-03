@@ -21,13 +21,14 @@ class PreProcessingStrategy(ABC):
         transformação de dados
         """
         ...
-    
+
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Treinamento e transformação de dados simultaneamente
         """
         return self.fit(data).transform(data)
-    
+
+
 class IdEncoder(PreProcessingStrategy):
     """
     Converter user_id e item_id para indices inteiros continuos
@@ -43,20 +44,21 @@ class IdEncoder(PreProcessingStrategy):
         self._user_map = {uid: idx for idx, uid in enumerate(users)}
         self._item_map = {iid: idx for idx, iid in enumerate(items)}
         return self
-    
+
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
         result = data.copy()
         result["user_id"] = data["user_id"].map(self._user_map)
         result["item_id"] = data["item_id"].map(self._item_map)
         return result
-    
+
     @property
     def n_users(self) -> int:
         return len(self._user_map)
-    
+
     @property
     def n_items(self) -> int:
         return len(self._item_map)
+
 
 class RatingNormalizer(PreProcessingStrategy):
     """
@@ -71,9 +73,8 @@ class RatingNormalizer(PreProcessingStrategy):
         self._min = float(data["rating"].min())
         self._max = float(data["rating"].max())
         return self
-    
+
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
         result = data.copy()
-        result["rating"] = (data["rating"] - self._min)/(self._max - self._min)
+        result["rating"] = (data["rating"] - self._min) / (self._max - self._min)
         return result
-        
