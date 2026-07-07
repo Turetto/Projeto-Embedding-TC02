@@ -1,0 +1,8 @@
+.venv/
+.git/
+.env
+__pycache__/
+data/raw/
+data/processed/
+mlruns/
+*.pyc
