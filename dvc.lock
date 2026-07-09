@@ -1,0 +1,74 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: uv run python scripts/preprocess.py
+    deps:
+    - path: data/raw/ml-100k/u.data
+      hash: md5
+      md5: 6e47046882bad158b0efbb84cd5cb987
+      size: 1979173
+    - path: scripts/preprocess.py
+      hash: md5
+      md5: 95e98a706697e87a250864fb246109f4
+      size: 977
+    outs:
+    - path: data/processed/ratings.csv
+      hash: md5
+      md5: 26763292aa76168d3e41e33bfc594e7d
+      size: 2079207
+  feature_engineering:
+    cmd: uv run python scripts/feature_engineering.py
+    deps:
+    - path: data/processed/ratings.csv
+      hash: md5
+      md5: 26763292aa76168d3e41e33bfc594e7d
+      size: 2079207
+    - path: scripts/feature_engineering.py
+      hash: md5
+      md5: d5c87328e1c4c840e2fc2c1d4b72ef96
+      size: 1166
+    - path: src/data/preprocessors.py
+      hash: md5
+      md5: 963739dcfa49a9bb4dd0a868ef36bada
+      size: 2303
+    outs:
+    - path: data/processed/features.csv
+      hash: md5
+      md5: db0e7c3d3aa9add67c83515bdfea4890
+      size: 2323901
+  train:
+    cmd: uv run python scripts/train.py
+    deps:
+    - path: data/processed/features.csv
+      hash: md5
+      md5: db0e7c3d3aa9add67c83515bdfea4890
+      size: 2323901
+    - path: scripts/train.py
+      hash: md5
+      md5: ef5e79b465dfe824113987699fe6c2b3
+      size: 1988
+    - path: src/settings.py
+      hash: md5
+      md5: cda53538d94e230688e0c0f31a1db325
+      size: 498
+    outs:
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: 281b5a9926df94810c02244d81b5bed1
+      size: 61
+  evaluate:
+    cmd: uv run python scripts/evaluate.py
+    deps:
+    - path: data/processed/features.csv
+      hash: md5
+      md5: db0e7c3d3aa9add67c83515bdfea4890
+      size: 2323901
+    - path: scripts/evaluate.py
+      hash: md5
+      md5: 533286395441f06bc0df4d3faff8767a
+      size: 1664
+    outs:
+    - path: metrics/eval_metrics.json
+      hash: md5
+      md5: 8d69cb66bebe6c05d2589efbd2ff95e5
+      size: 98

@@ -1,0 +1,35 @@
+stages:
+
+  preprocess:
+    cmd: uv run python scripts/preprocess.py
+    deps:
+      - scripts/preprocess.py
+      - data/raw/ml-100k/u.data
+    outs:
+      - data/processed/ratings.csv
+
+  feature_engineering:
+    cmd: uv run python scripts/feature_engineering.py
+    deps:
+      - scripts/feature_engineering.py
+      - data/processed/ratings.csv
+      - src/data/preprocessors.py
+    outs:
+      - data/processed/features.csv
+
+  train:
+    cmd: uv run python scripts/train.py
+    deps:
+      - scripts/train.py
+      - data/processed/features.csv
+      - src/settings.py
+    outs:
+      - metrics/train_metrics.json
+
+  evaluate:
+    cmd: uv run python scripts/evaluate.py
+    deps:
+      - scripts/evaluate.py
+      - data/processed/features.csv
+    outs:
+      - metrics/eval_metrics.json
