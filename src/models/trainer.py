@@ -1,0 +1,102 @@
+import torch
+import torch.nn as nn
+from torch.utils.data import TensorDataset, dataloader
+
+from src.models.mlp import MLPRecommender
+
+
+def build_dataloader(
+    user_ids: torch.tensor,
+    item_ids: torch.tensor,
+    ratings: torch.tensor,
+    batch_size: int = 256,
+) -> dataloader:
+    """
+    Criar dataloader a partir dos tensores
+    """
+    dataset = TensorDataset(user_ids, item_ids, ratings)
+    return dataloader(dataset, batch_size=batch_size, shuffle=True)
+
+
+def train_epoch(
+    model: MLPRecommender,
+    loader: dataloader,
+    optimizer: torch.optim.optimizer,
+    criterion: nn.Module,
+) -> float:
+    """
+    Treinamento de uma epoca e retorno da loss media
+    """
+    model.train()
+    total_loss = 0.0
+
+    for user_ids, item_ids, ratings in loader:
+        optimizer.zero_grad()
+        predictions = model(user_ids, item_ids)
+        loss = criterion(predictions, ratings)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+
+    return total_loss / len(loader)
+
+
+def evaluate_epoch(
+    model: MLPRecommender,
+    loader: dataloader,
+    criterion: nn.Module,
+) -> float:
+    """
+    Avaliar o modelo e retornar a loss media
+    """
+    model.eval()
+    total_loss = 0.0
+
+    with torch.no_grad():
+        for user_ids, item_ids, ratings in loader:
+            predictions = model(user_ids, item_ids)
+            loss = criterion(predictions, ratings)
+            total_loss += loss.item()
+
+    return total_loss / len(loader)
+
+
+def train_with_early_stopping(
+    model: MLPRecommender,
+    train_loader: dataloader,
+    val_loader: dataloader,
+    n_epochs: int = 50,
+    patience: int = 5,
+    lr: float = 0.001,
+) -> list[dict]:
+    """
+    Treinamento com early stopping
+
+    Args: patience: para o treino se a val_loss não melhorar apos n epocas
+    return: historico de metricas por epoca
+    """
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    criterion = nn.MSELoss()
+
+    best_val_loss = float("inf")
+    epochs_without_improvement = 0
+    history = []
+
+    for epoch in range(n_epochs):
+        train_loss = train_epoch(model, train_loader, optimizer, criterion)
+        val_loss = evaluate_epoch(model, val_loader, criterion)
+
+        history.append({"epoch": epoch + 1, "train_loss": train_loss, "val_loss": val_loss})
+        print(f"Época {epoch+1:02d} - train_loss: {train_loss:.4f} | val_loss: {val_loss:.4f}")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+
+        if epochs_without_improvement >= patience:
+            print(f"Early stopping na época {epoch+1}")
+            break
+
+    return history
