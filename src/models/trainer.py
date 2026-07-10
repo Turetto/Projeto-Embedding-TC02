@@ -87,7 +87,10 @@ def train_with_early_stopping(
         val_loss = evaluate_epoch(model, val_loader, criterion)
 
         history.append({"epoch": epoch + 1, "train_loss": train_loss, "val_loss": val_loss})
-        print(f"Época {epoch+1:02d} - train_loss: {train_loss:.4f} | val_loss: {val_loss:.4f}")
+        print(
+            f"Época {epoch+1:02d} - train_loss: {train_loss:.4f}",
+            " | val_loss: {val_loss:.4f}",
+        )
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
