@@ -4,31 +4,54 @@ from pathlib import Path
 import mlflow
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
 
+from src.models.mlp import MLPRecommender
+from src.models.trainer import build_dataloader, train_with_early_stopping
 from src.settings import settings
 
 INPUT_PATH = Path("data/processed/features.csv")
 METRICS_PATH = Path("metrics/train_metrics.json")
+MODEL_PATH = Path("models/recommender.pt")
 
 
-def load_features() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def load_data() -> tuple:
     """
-    Carrega features e divide em treino e teste
+    Carregar e dividir os dados em treino, validação e texte
     """
     data = pd.read_csv(INPUT_PATH)
 
     x = data[["user_id", "item_id"]].values
-    y = data["rating"].values
+    y = data["rating"].values.astype(np.float32)
 
-    return train_test_split(x, y, test_size=0.2, random_state=settings.random_seed)
+    x_train, x_test, y_train, y_test = train_test_split(
+        x, y, test_size=0.2, random_state=settings.random_seed
+    )
+
+    x_train, x_val, y_train, y_val = train_test_split(
+        x_train, y_train, test_size=0.1, random_state=settings.random_seed
+    )
+
+    return x_train, x_val, x_test, y_train, y_val, y_test
 
 
-def evaluate(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
+def to_tensors(x: np.ndarray, y: np.ndarray) -> tuple:
     """
-    Calculo de acuracia do modelo
+    Converter arrays np para tensores do torch
+    """
+    return (
+        torch.tensor(x[:, 0], dtype=torch.long),
+        torch.tensor(x[:, 1], dtype=torch.long),
+        torch.tensor(y, dtype=torch.float32),
+    )
+
+
+def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
+    """
+    Calculo das metricas de avaliação
     """
     return {
         "rmse": float(np.sqrt(mean_squared_error(y_true, y_pred))),
@@ -40,28 +63,81 @@ def train_baseline(x_train, y_train, x_test, y_test) -> None:
     """
     Modelo baseline-dummy com registro no Mlflow
     """
-    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
-    mlflow.set_experiment(settings.mlflow_experiment_name)
-
     with mlflow.start_run(run_name="baseline_dummy"):
         model = DummyRegressor(strategy="mean")
         model.fit(x_train, y_train)
         y_pred = model.predict(x_test)
 
-        metrics = evaluate(y_test, y_pred)
+        metrics = compute_metrics(y_test, y_pred)
 
         mlflow.log_param("strategy", "mean")
         mlflow.log_metrics(metrics)
 
         print(f"Baseline - RMSE: {metrics['rmse']:.4f} | MAE: {metrics['mae']:.4f}")
 
-        METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
-        METRICS_PATH.write_text(json.dumps(metrics, indent=2))
+    return metrics
+
+
+def train_mlp(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
+    """
+    Treinar rede neural e log no mlflow
+    """
+    n_users = int(max(x_train[:, 0].max(), x_test[:, 0].max())) + 1
+    n_items = int(max(x_train[:, 1].max(), x_test[:, 1].max())) + 1
+
+    with mlflow.start_run(run_name="mlp_embeddings"):
+        mlflow.log_params(
+            {
+                "n_users": n_users,
+                "n_items": n_items,
+                "embedding_dim": 32,
+                "lr": 0.001,
+                "patience": 5,
+                "random_seed": settings.random_seed,
+            }
+        )
+
+        model = MLPRecommender(n_users=n_users, n_items=n_items)
+
+        train_loader = build_dataloader(*to_tensors(x_train, y_train))
+        val_loader = build_dataloader(*to_tensors(x_val, y_val))
+
+        history = train_with_early_stopping(model, train_loader, val_loader)
+
+        for entry in history:
+            mlflow.log_metrics(
+                {"train_loss": entry["train_loss"], "val_loss": entry["val_loss"]},
+                stop=entry["epoch"],
+            )
+
+        model.eval()
+        with torch.no_grad():
+            user_t, item_t, _ = to_tensors(x_test, y_test)
+            y_pred = model(user_t, item_t).numpy()
+
+        metrics = compute_metrics(y_test, y_pred)
+        mlflow.log_metrics(metrics)
+        print(f"MLP - RMSE: {metrics['rmse']:.4f} | MAE: {metrics['mae']:.4f}")
+
+        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        model.save(str(MODEL_PATH))
+        mlflow.log_artifact(str(MODEL_PATH))
+
+    return metrics
 
 
 def main() -> None:
-    x_train, x_test, y_train, y_test = load_features()
+    torch.manual_seed(settings.random_seed)
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    mlflow.set_experiment(settings.mlflow_experiment_name)
+
+    x_train, x_val, x_test, y_train, y_val, y_test = load_data()
+
     train_baseline(x_train, y_train, x_test, y_test)
+    metrics = train_mlp(x_train, x_val, x_test, y_train, y_val, y_test)
+
+    METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    METRICS_PATH.write_text(json.dumps(metrics, indent=2))
 
 
 if __name__ == "__main__":
