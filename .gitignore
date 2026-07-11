@@ -18,6 +18,7 @@ model/
 # MLflow
 mlruns/
 mlartifacts/
+mlflow.db
 
 # DVC
 /tmp/
