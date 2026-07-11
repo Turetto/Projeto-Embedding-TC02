@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import TensorDataset, dataloader
+from torch.utils.data import DataLoader, TensorDataset
 
 from src.models.mlp import MLPRecommender
 
@@ -10,17 +10,17 @@ def build_dataloader(
     item_ids: torch.tensor,
     ratings: torch.tensor,
     batch_size: int = 256,
-) -> dataloader:
+) -> DataLoader:
     """
     Criar dataloader a partir dos tensores
     """
     dataset = TensorDataset(user_ids, item_ids, ratings)
-    return dataloader(dataset, batch_size=batch_size, shuffle=True)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
 def train_epoch(
     model: MLPRecommender,
-    loader: dataloader,
+    loader: DataLoader,
     optimizer: torch.optim.optimizer,
     criterion: nn.Module,
 ) -> float:
@@ -43,7 +43,7 @@ def train_epoch(
 
 def evaluate_epoch(
     model: MLPRecommender,
-    loader: dataloader,
+    loader: DataLoader,
     criterion: nn.Module,
 ) -> float:
     """
@@ -63,8 +63,8 @@ def evaluate_epoch(
 
 def train_with_early_stopping(
     model: MLPRecommender,
-    train_loader: dataloader,
-    val_loader: dataloader,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
     n_epochs: int = 50,
     patience: int = 5,
     lr: float = 0.001,
@@ -88,8 +88,7 @@ def train_with_early_stopping(
 
         history.append({"epoch": epoch + 1, "train_loss": train_loss, "val_loss": val_loss})
         print(
-            f"Época {epoch+1:02d} - train_loss: {train_loss:.4f}",
-            " | val_loss: {val_loss:.4f}",
+            f"Época {epoch+1:02d} - train_loss: {train_loss:.4f} | val_loss: {val_loss:.4f}",
         )
 
         if val_loss < best_val_loss:

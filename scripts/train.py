@@ -107,7 +107,7 @@ def train_mlp(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
         for entry in history:
             mlflow.log_metrics(
                 {"train_loss": entry["train_loss"], "val_loss": entry["val_loss"]},
-                stop=entry["epoch"],
+                step=entry["epoch"],
             )
 
         model.eval()
