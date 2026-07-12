@@ -9,7 +9,7 @@ from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
 
-from src.models.mlp import MLPRecommender
+from src.models.mlp import MLPRecommender, MLPRecommenderV2
 from src.models.trainer import build_dataloader, train_with_early_stopping
 from src.settings import settings
 
@@ -59,6 +59,15 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     }
 
 
+def get_n_users_items(x_train: np.ndarray, x_test: np.ndarray) -> tuple[int, int]:
+    """
+    retorna numero de usuarios e itens unicos
+    """
+    n_users = int(max(x_train[:, 0].max(), x_test[:, 0].max())) + 1
+    n_items = int(max(x_train[:, 1].max(), x_test[:, 1].max())) + 1
+    return n_users, n_items
+
+
 def train_baseline(x_train, y_train, x_test, y_test) -> None:
     """
     Modelo baseline-dummy com registro no Mlflow
@@ -78,16 +87,17 @@ def train_baseline(x_train, y_train, x_test, y_test) -> None:
     return metrics
 
 
-def train_mlp(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
+def train_mlp_v1(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
     """
-    Treinar rede neural e log no mlflow
+    Treinar rede neural e log no mlflow (v1)
     """
-    n_users = int(max(x_train[:, 0].max(), x_test[:, 0].max())) + 1
-    n_items = int(max(x_train[:, 1].max(), x_test[:, 1].max())) + 1
 
-    with mlflow.start_run(run_name="mlp_embeddings"):
+    n_users, n_items = get_n_users_items(x_train, x_test)
+
+    with mlflow.start_run(run_name="mlp_v1"):
         mlflow.log_params(
             {
+                "model": "mlp_V1",
                 "n_users": n_users,
                 "n_items": n_items,
                 "embedding_dim": 32,
@@ -97,7 +107,7 @@ def train_mlp(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
             }
         )
 
-        model = MLPRecommender(n_users=n_users, n_items=n_items)
+        model = MLPRecommender(n_users=n_users, n_items=n_items, embedding_dim=32)
 
         train_loader = build_dataloader(*to_tensors(x_train, y_train))
         val_loader = build_dataloader(*to_tensors(x_val, y_val))
@@ -107,6 +117,56 @@ def train_mlp(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
         for entry in history:
             mlflow.log_metrics(
                 {"train_loss": entry["train_loss"], "val_loss": entry["val_loss"]},
+                step=entry["epoch"],
+            )
+
+        model.eval()
+        with torch.no_grad():
+            user_t, item_t, _ = to_tensors(x_test, y_test)
+            y_pred = model(user_t, item_t).numpy()
+
+        metrics = compute_metrics(y_test, y_pred)
+        mlflow.log_metrics(metrics)
+        print(f"MLP - RMSE: {metrics['rmse']:.4f} | MAE: {metrics['mae']:.4f}")
+
+    return metrics
+
+
+def train_mlp_v2(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
+    """
+    Treinar rede neural e log no mlflow (v2)
+    """
+
+    n_users, n_items = get_n_users_items(x_train, x_test)
+
+    with mlflow.start_run(run_name="mlp_v2"):
+        mlflow.log_params(
+            {
+                "model": "mlp_V2",
+                "n_users": n_users,
+                "n_items": n_items,
+                "embedding_dim": 64,
+                "lr": 0.001,
+                "patience": 10,
+                "batch_norm": True,
+                "random_seed": settings.random_seed,
+            }
+        )
+
+        model = MLPRecommenderV2(n_users=n_users, n_items=n_items, embedding_dim=64)
+
+        train_loader = build_dataloader(*to_tensors(x_train, y_train))
+        val_loader = build_dataloader(*to_tensors(x_val, y_val))
+
+        history = train_with_early_stopping(model, train_loader, val_loader, weight_decay=1e-4)
+
+        for entry in history:
+            mlflow.log_metrics(
+                {
+                    "train_loss": entry["train_loss"],
+                    "val_loss": entry["val_loss"],
+                    "lr": entry["lr"],
+                },
                 step=entry["epoch"],
             )
 
@@ -134,7 +194,8 @@ def main() -> None:
     x_train, x_val, x_test, y_train, y_val, y_test = load_data()
 
     train_baseline(x_train, y_train, x_test, y_test)
-    metrics = train_mlp(x_train, x_val, x_test, y_train, y_val, y_test)
+    train_mlp_v1(x_train, x_val, x_test, y_train, y_val, y_test)
+    metrics = train_mlp_v2(x_train, x_val, x_test, y_train, y_val, y_test)
 
     METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
     METRICS_PATH.write_text(json.dumps(metrics, indent=2))
