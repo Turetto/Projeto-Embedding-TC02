@@ -68,15 +68,23 @@ def train_with_early_stopping(
     n_epochs: int = 50,
     patience: int = 5,
     lr: float = 0.001,
+    weight_decay: float = 1e-4,
 ) -> list[dict]:
     """
     Treinamento com early stopping
 
-    Args: patience: para o treino se a val_loss não melhorar apos n epocas
+    Args:
+        patience: para o treino se a val_loss não melhorar apos n epocas
+        weight decay: regularizacao L2 para o otimizador
+
     return: historico de metricas por epoca
     """
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss()
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=3
+    )
 
     best_val_loss = float("inf")
     epochs_without_improvement = 0
@@ -85,10 +93,24 @@ def train_with_early_stopping(
     for epoch in range(n_epochs):
         train_loss = train_epoch(model, train_loader, optimizer, criterion)
         val_loss = evaluate_epoch(model, val_loader, criterion)
+        current_lr = optimizer.param_groups[0]["lr"]
 
-        history.append({"epoch": epoch + 1, "train_loss": train_loss, "val_loss": val_loss})
+        scheduler.step(val_loss)
+
+        history.append(
+            {
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "lr": current_lr,
+            }
+        )
+
         print(
-            f"Época {epoch+1:02d} - train_loss: {train_loss:.4f} | val_loss: {val_loss:.4f}",
+            f"Época {epoch+1:02d} - "
+            f"train_loss: {train_loss:.4f} | "
+            f"val_loss: {val_loss:.4f} | "
+            f"lr: {current_lr:.6f}",
         )
 
         if val_loss < best_val_loss:
