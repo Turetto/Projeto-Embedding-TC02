@@ -3,7 +3,7 @@ from mlflow.tracking import MlflowClient
 
 from src.settings import settings
 
-MODEL_NAME = "e-commerce-recomender"
+MODEL_NAME = "ecommerce-recomender"
 
 
 def get_best_run() -> str:
