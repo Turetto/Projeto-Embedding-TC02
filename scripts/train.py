@@ -145,7 +145,7 @@ def train_mlp_v2(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
                 "model": "mlp_V2",
                 "n_users": n_users,
                 "n_items": n_items,
-                "embedding_dim": 64,
+                "embedding_dim": 32,
                 "lr": 0.001,
                 "patience": 10,
                 "batch_norm": True,
@@ -158,7 +158,9 @@ def train_mlp_v2(x_train, x_val, x_test, y_train, y_val, y_test) -> dict:
         train_loader = build_dataloader(*to_tensors(x_train, y_train))
         val_loader = build_dataloader(*to_tensors(x_val, y_val))
 
-        history = train_with_early_stopping(model, train_loader, val_loader, weight_decay=1e-4)
+        history = train_with_early_stopping(
+            model, train_loader, val_loader, weight_decay=1e-4, patience=10, lr=0.001
+        )
 
         for entry in history:
             mlflow.log_metrics(

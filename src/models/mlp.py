@@ -55,17 +55,13 @@ class MLPRecommenderV2(BaseRecommender, nn.Module):
     Modelo de rede neural com embeddings para recomendacao
     """
 
-    def __init__(self, n_users: int, n_items: int, embedding_dim: int = 64) -> None:
+    def __init__(self, n_users: int, n_items: int, embedding_dim: int = 32) -> None:
         nn.Module.__init__(self)
         self.user_embedding = nn.Embedding(n_users, embedding_dim)
         self.item_embedding = nn.Embedding(n_items, embedding_dim)
 
         self.network = nn.Sequential(
-            nn.Linear(embedding_dim * 2, 128),
-            nn.BatchNorm1d(128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 64),
+            nn.Linear(embedding_dim * 2, 64),
             nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.Dropout(0.2),
