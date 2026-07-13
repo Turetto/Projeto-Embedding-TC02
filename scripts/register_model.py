@@ -15,13 +15,15 @@ def get_best_run() -> str:
 
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id],
+        filter_string="metrics.rmse >0",
         order_by=["metrics.rmse ASC"],
     )
 
     best_run = runs[0]
+    best_rmse = best_run.data.metrics["rmse"]
     print(f"Melhor run: {best_run.info.run_id}")
-    print(f"RMSE: {best_run.data.metrics['rmse']:.4f}")
-    return best_run.info.run_id
+    print(f"RMSE: {best_rmse:.4f}")
+    return best_run.info.run_id, best_rmse
 
 
 def register_model(run_id: str) -> int:
@@ -52,7 +54,7 @@ def promote_to_production(version: int) -> None:
 
 def main() -> None:
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
-    run_id = get_best_run()
+    run_id, rmse = get_best_run()
     version = register_model(run_id)
     promote_to_production(version)
 
