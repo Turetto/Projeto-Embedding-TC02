@@ -1,23 +1,24 @@
 services:
 
   mlflow:
-    image: python:3.14.0-slim
+    image: ghcr.io/mlflow/mlflow:v2.12.2
     container_name: mlflow-server
     command: >
-      bash -c "pip install mlflow &&
-               mlflow server
-               --host 0.0.0.0
-               --port 5000
-               --backend-store-uri sqlite:///mlflow.db
-               --default-artifact-root /mlflow/artifacts"
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
     ports:
       - "5000:5000"
     volumes:
       - mlflow_data:/mlflow
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
       interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 15s
 
   trainer:
     build: .
