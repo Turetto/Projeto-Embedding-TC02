@@ -21,7 +21,7 @@ def build_dataloader(
 def train_epoch(
     model: MLPRecommender,
     loader: DataLoader,
-    optimizer: torch.optim.optimizer,
+    optimizer: torch.optim.Optimizer,
     criterion: nn.Module,
 ) -> float:
     """

@@ -24,6 +24,8 @@ services:
     build: .
     container_name: model-trainer
     env_file: .env
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
     volumes:
       - ./data:/app/data
       - ./models:/app/models
